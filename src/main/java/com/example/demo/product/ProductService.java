@@ -33,4 +33,10 @@ public class ProductService {
         product.setStock(product.getStock() - quantity);
         return productRepository.save(product);
     }
+
+    // Lấy chi tiết sản phẩm (Dùng cho Cart và Order gọi sang)
+    public Product getProductById(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
+    }
 }
