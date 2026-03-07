@@ -1,5 +1,7 @@
 package com.example.demo.product;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -7,7 +9,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ProductService {
@@ -15,6 +21,8 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private Cloudinary cloudinary; // Inject Cloudinary Bean
     // ==========================================
     // API DÀNH CHO USER (KHÁCH HÀNG)
     // ==========================================
@@ -103,5 +111,25 @@ public class ProductService {
         }
         product.setStock(product.getStock() - quantity);
         return productRepository.save(product);
+    }
+    // --- Xử lý Upload ảnh ---
+    @Transactional
+    public String uploadImage(Long productId, MultipartFile file) throws IOException {
+        // 1. Kiểm tra sản phẩm có tồn tại không
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + productId));
+
+        // 2. Upload file lên Cloudinary
+        // ObjectUtils.emptyMap() nghĩa là ta dùng setting mặc định của Cloudinary
+        Map uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+
+        // 3. Lấy URL an toàn (HTTPS) từ kết quả trả về
+        String imageUrl = uploadResult.get("secure_url").toString();
+
+        // 4. Cập nhật vào Entity và lưu Database
+        product.setImageUrl(imageUrl);
+        productRepository.save(product);
+
+        return imageUrl;
     }
 }
