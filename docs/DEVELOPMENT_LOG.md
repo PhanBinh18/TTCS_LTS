@@ -14,6 +14,7 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
     * Cập nhật thông tin, giá cả, số lượng tồn kho (stock).
     * Xóa mềm (Soft Delete) các sản phẩm ngừng kinh doanh để không làm hỏng lịch sử đơn hàng.
     * Xem danh sách sản phẩm sắp hết hàng để có kế hoạch nhập kho.
+    * Cập nhật trạng thái đơn hàng (PENDING -> PROCESSING -> SHIPPING -> DELIVERED) và xử lý Hủy đơn (CANCELLED) kèm tự động hoàn kho.
 * **Luồng Khách hàng (User):**
     * Đăng ký tài khoản hệ thống (hiện tại lưu plain-text, chuẩn bị tích hợp Security).
     * Xem danh sách sản phẩm (có hỗ trợ phân trang).
@@ -42,10 +43,11 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 
 **Module Order:**
 * `POST /api/orders/checkout`: Thanh toán toàn bộ giỏ hàng và tạo đơn.
+* `PUT /api/orders/{id}/status`: Cập nhật trạng thái đơn hàng (Dành cho Admin), hỗ trợ tham số newStatus.
 
 ## 4. Các thành phần backend liên quan
 * **Cấu trúc thư mục:** Tổ chức theo Feature-based Packaging (`identity`, `product`, `cart`, `order`).
-* **Cấu hình (Config):** Các cấu hình ngoại vi như `CloudinaryConfig` được đặt tĩnh bên trong module `product` để đảm bảo tính đóng gói (Encapsulation), thuận tiện khi tách service.
+* **Cấu hình (Config):** Các cấu hình ngoại vi như `CloudinaryConfig` được đặt tĩnh bên trong module `product` để đảm bảo tính đóng gói (Encapsulation), thuận tiện khi tách service.Riêng cấu hình CorsConfig được đặt ở tầng global để mở cổng giao tiếp (Cross-Origin) an toàn cho Frontend.
 * **Quản lý biến môi trường:** Sử dụng file `.env` kết hợp cấu hình `spring.config.import=optional:file:.env` hoặc Plugin IDE để bảo mật API Key của bên thứ 3.
 * **Database & ORM:** Sử dụng Spring Data JPA, Hibernate, MySQL chạy trên Docker.
 
@@ -54,6 +56,8 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 * **Dynamic Query (JPQL):** Sử dụng kỹ thuật `(:keyword IS NULL OR ...)` để xử lý linh hoạt việc tìm kiếm và lọc dữ liệu trên cùng một method mà không cần viết các câu lệnh `if-else` dài dòng.
 * **Cloud Storage Integration:** Tích hợp SDK của Cloudinary để xử lý `MultipartFile`, trả về `secure_url` (HTTPS) thay vì lưu file vật lý trên server, giúp ứng dụng giữ trạng thái Stateless.
 * **Transaction Management:** Đóng gói luồng Checkout bằng `@Transactional`. Đảm bảo tính toàn vẹn ACID: Nếu bước tạo Đơn hàng thất bại, việc trừ kho bên Product và dọn giỏ bên Cart sẽ tự động Rollback.
+* **Order State Machine (Cỗ máy trạng thái):** Validate chặt chẽ luồng vòng đời đơn hàng. Chặn mọi thao tác "đi lùi" trạng thái (VD: SHIPPING về PENDING) và khóa cứng các đơn hàng ở trạng thái đóng băng (Terminal states: DELIVERED, CANCELLED).
+* **Inventory Rollback (Hoàn kho tự động):** Khi đơn hàng bị hủy (chuyển sang CANCELLED), OrderService tự động gọi ngược lại ProductService.increaseStock() để cộng trả lại số lượng hàng hóa vào DB, đảm bảo không bị thất thoát rác.
 
 ## 6. Database / Entity liên quan
 Thiết kế theo triết lý No-Foreign-Key giữa các Bounded Contexts:
@@ -70,10 +74,11 @@ Thiết kế theo triết lý No-Foreign-Key giữa các Bounded Contexts:
 - [x] Tích hợp Cloudinary Upload Ảnh.
 - [x] Xây dựng Module Cart (Logic tính toán và cộng dồn item).
 - [x] Xây dựng Module Order & Luồng Checkout khép kín.
+- [x] Xây dựng **Order State Machine** (Chuyển đổi trạng thái đơn hàng: PENDING -> PROCESSING -> SHIPPING -> DELIVERED / CANCELLED).
+- [x] Logic Hoàn kho (Rollback Inventory) khi hủy đơn hàng.
+- [x] Cấu hình CORS Global để sẵn sàng kết nối với Frontend (React/Vue/HTML).
 
 ## 8. Chưa hoàn thành
-- [ ] Xây dựng **Order State Machine** (Chuyển đổi trạng thái đơn hàng: PENDING -> PROCESSING -> SHIPPING -> DELIVERED / CANCELLED).
-- [ ] Logic Hoàn kho (Rollback Inventory) khi hủy đơn hàng.
 - [ ] Bảo mật phân quyền: Tích hợp Spring Security & JWT Token.
 - [ ] Tách ứng dụng thành Microservices & Tích hợp API Gateway, Service Discovery.
 
@@ -88,3 +93,4 @@ Thiết kế theo triết lý No-Foreign-Key giữa các Bounded Contexts:
 * **Package `product`:** `Product`, `ProductRepository`, `ProductService`, `ProductController`, `config/CloudinaryConfig`.
 * **Package `cart`:** `Cart`, `CartItem`, `CartRequest`, `CartRepository`, `CartService`, `CartController`.
 * **Package `order`:** `Order`, `OrderItem`, `CheckoutRequest`, `OrderRepository`, `OrderService`, `OrderController`.
+* **Package config:** CorsConfig (Xử lý lỗi CORS cho Frontend).
