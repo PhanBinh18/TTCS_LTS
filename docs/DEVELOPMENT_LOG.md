@@ -10,17 +10,17 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 
 ## 2. User flow / Luồng xử lý
 * **Luồng Admin (Quản trị viên):**
-    * Thêm mới sản phẩm -> Tải ảnh lên Cloudinary -> Trả về URL an toàn để lưu vào Database.
-    * Cập nhật thông tin, giá cả, số lượng tồn kho (stock).
-    * Xóa mềm (Soft Delete) các sản phẩm ngừng kinh doanh để không làm hỏng lịch sử đơn hàng.
-    * Xem danh sách sản phẩm sắp hết hàng để có kế hoạch nhập kho.
-    * Cập nhật trạng thái đơn hàng (PENDING -> PROCESSING -> SHIPPING -> DELIVERED) và xử lý Hủy đơn (CANCELLED) kèm tự động hoàn kho.
+  * Thêm mới sản phẩm -> Tải ảnh lên Cloudinary -> Trả về URL an toàn để lưu vào Database.
+  * Cập nhật thông tin, giá cả, số lượng tồn kho (stock).
+  * Xóa mềm (Soft Delete) các sản phẩm ngừng kinh doanh để không làm hỏng lịch sử đơn hàng.
+  * Xem danh sách sản phẩm sắp hết hàng để có kế hoạch nhập kho.
+  * Cập nhật trạng thái đơn hàng (PENDING -> PROCESSING -> SHIPPING -> DELIVERED) và xử lý Hủy đơn (CANCELLED) kèm tự động hoàn kho.
 * **Luồng Khách hàng (User):**
-    * Đăng ký tài khoản hệ thống (hiện tại lưu plain-text, chuẩn bị tích hợp Security).
-    * Xem danh sách sản phẩm (có hỗ trợ phân trang).
-    * Tìm kiếm theo tên kết hợp lọc theo danh mục (Category) bằng truy vấn động (Dynamic Query).
-    * Thêm sản phẩm vào Giỏ hàng (tự động cộng dồn số lượng nếu sản phẩm đã tồn tại trong giỏ).
-    * **Thanh toán (Checkout):** Hệ thống tự động lấy danh sách items từ Giỏ hàng -> Kiểm tra và trừ tồn kho thực tế -> Tạo Đơn hàng -> Xóa rỗng Giỏ hàng.
+  * Đăng ký tài khoản hệ thống (hiện tại lưu plain-text, chuẩn bị tích hợp Security).
+  * Xem danh sách sản phẩm (có hỗ trợ phân trang).
+  * Tìm kiếm theo tên kết hợp **lọc theo Danh mục (Category), Hãng sản xuất (Brand) và Sắp xếp động (Sort)** bằng truy vấn động (Dynamic Query).
+  * Thêm sản phẩm vào Giỏ hàng (tự động cộng dồn số lượng nếu sản phẩm đã tồn tại trong giỏ). Dữ liệu trả về được làm giàu (enrich) đầy đủ thông tin sản phẩm.
+  * **Thanh toán (Checkout):** Hệ thống tự động lấy danh sách items từ Giỏ hàng -> Kiểm tra và trừ tồn kho thực tế -> Tạo Đơn hàng -> Xóa rỗng Giỏ hàng.
 
 ## 3. API liên quan
 **Module Identity:**
@@ -28,7 +28,7 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 * `GET /api/users/{id}`: Lấy thông tin tài khoản.
 
 **Module Product:**
-* `GET /api/products`: Lấy danh sách (Params: `page`, `size`, `sortBy`, `keyword`, `category`).
+* `GET /api/products`: Lấy danh sách (Params: `page`, `size`, `sortType`, `keyword`, `category`, `brand`).
 * `GET /api/products/{id}`: Xem chi tiết 1 sản phẩm (chỉ query các item có `isActive = true`).
 * `POST /api/products`: Tạo mới sản phẩm.
 * `PUT /api/products/{id}`: Cập nhật thông tin sản phẩm.
@@ -37,8 +37,8 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 * `GET /api/products/low-stock`: Thống kê hàng sắp hết.
 
 **Module Cart:**
-* `GET /api/carts/{userId}`: Xem giỏ hàng của user.
-* `POST /api/carts/add`: Thêm vào giỏ / Cộng dồn số lượng.
+* `GET /api/carts/{userId}`: Xem giỏ hàng của user (Trả về DTO).
+* `POST /api/carts/add`: Thêm vào giỏ / Cộng dồn số lượng (Trả về DTO).
 * `DELETE /api/carts/{userId}/clear`: Xóa trắng giỏ hàng sau khi checkout thành công.
 
 **Module Order:**
@@ -49,11 +49,12 @@ Xây dựng một hệ thống backend thương mại điện tử chuyên bán 
 * **Cấu trúc thư mục:** Tổ chức theo Feature-based Packaging (`identity`, `product`, `cart`, `order`).
 * **Cấu hình (Config):** Các cấu hình ngoại vi như `CloudinaryConfig` được đặt tĩnh bên trong module `product` để đảm bảo tính đóng gói (Encapsulation), thuận tiện khi tách service.Riêng cấu hình CorsConfig được đặt ở tầng global để mở cổng giao tiếp (Cross-Origin) an toàn cho Frontend.
 * **Quản lý biến môi trường:** Sử dụng file `.env` kết hợp cấu hình `spring.config.import=optional:file:.env` hoặc Plugin IDE để bảo mật API Key của bên thứ 3.
-* **Database & ORM:** Sử dụng Spring Data JPA, Hibernate, MySQL chạy trên Docker.
+* **Database & ORM:** Sử dụng Spring Data JPA, Hibernate, MySQL chạy trên Docker. Cấu hình ép chuẩn UTF-8 từ Database đến Maven để tránh lỗi font chữ tiếng Việt.
 
 ## 5. Logic xử lý chính
-* **Inter-module Communication:** Các module không gọi chéo Repository của nhau. Ví dụ: `OrderService` gọi `ProductService.reduceStock()` để xử lý kho.
-* **Dynamic Query (JPQL):** Sử dụng kỹ thuật `(:keyword IS NULL OR ...)` để xử lý linh hoạt việc tìm kiếm và lọc dữ liệu trên cùng một method mà không cần viết các câu lệnh `if-else` dài dòng.
+* **Inter-module Communication:** Các module không gọi chéo Repository của nhau. Ví dụ: `OrderService` gọi `ProductService.reduceStock()` để xử lý kho. `OrderService` gọi `CartService.getCartEntity()` để lấy dữ liệu giỏ hàng.
+* **DTO Pattern (Data Transfer Object):** Tách biệt hoàn toàn Entity (quản lý bởi Hibernate) và API Response. Khắc phục triệt để lỗi mất dữ liệu (`null`) khi sử dụng các trường `@Transient` (ví dụ: bơm thông tin Product vào CartItem), đảm bảo API trả về JSON chuẩn xác 100%.
+* **Dynamic Query (JPQL):** Sử dụng kỹ thuật `(:keyword IS NULL OR ...)` để xử lý linh hoạt việc tìm kiếm, lọc theo nhiều tiêu chí (Category, Brand) trên cùng một method mà không cần viết các câu lệnh `if-else` dài dòng. Xử lý Sort động thông qua `Pageable`.
 * **Cloud Storage Integration:** Tích hợp SDK của Cloudinary để xử lý `MultipartFile`, trả về `secure_url` (HTTPS) thay vì lưu file vật lý trên server, giúp ứng dụng giữ trạng thái Stateless.
 * **Transaction Management:** Đóng gói luồng Checkout bằng `@Transactional`. Đảm bảo tính toàn vẹn ACID: Nếu bước tạo Đơn hàng thất bại, việc trừ kho bên Product và dọn giỏ bên Cart sẽ tự động Rollback.
 * **Order State Machine (Cỗ máy trạng thái):** Validate chặt chẽ luồng vòng đời đơn hàng. Chặn mọi thao tác "đi lùi" trạng thái (VD: SHIPPING về PENDING) và khóa cứng các đơn hàng ở trạng thái đóng băng (Terminal states: DELIVERED, CANCELLED).
@@ -77,20 +78,25 @@ Thiết kế theo triết lý No-Foreign-Key giữa các Bounded Contexts:
 - [x] Xây dựng **Order State Machine** (Chuyển đổi trạng thái đơn hàng: PENDING -> PROCESSING -> SHIPPING -> DELIVERED / CANCELLED).
 - [x] Logic Hoàn kho (Rollback Inventory) khi hủy đơn hàng.
 - [x] Cấu hình CORS Global để sẵn sàng kết nối với Frontend (React/Vue/HTML).
+- [x] **Áp dụng DTO Pattern cho Giỏ hàng (`CartDto`, `CartItemDto`) để fix triệt để lỗi mất dữ liệu do Hibernate Persistent State.**
+- [x] **Mở rộng bộ lọc Sản phẩm (Lọc theo Hãng - Brand) và Sắp xếp động (A-Z, Giá tăng/giảm).**
+- [x] **Cấu hình đồng bộ Encoding UTF-8 (Database URL, Maven) để sửa lỗi font tiếng Việt.**
 
 ## 8. Chưa hoàn thành
 - [ ] Bảo mật phân quyền: Tích hợp Spring Security & JWT Token.
 - [ ] Tách ứng dụng thành Microservices & Tích hợp API Gateway, Service Discovery.
+- [ ] Hoàn thiện giao diện Frontend kết nối full API.
 
 ## 9. Ghi chú kỹ thuật
 * Đã xử lý triệt để lỗi đệ quy vô tận khi parse JSON bằng `@JsonIgnore` tại các Entity con (`OrderItem`, `CartItem`).
+* Tránh sử dụng trực tiếp Entity làm API Response nếu có trộn lẫn dữ liệu ngoại lai (`@Transient`). Sử dụng DTO là giải pháp tối ưu.
 * Chú ý bảo mật: File `.env` chứa credential của database và Cloudinary phải luôn nằm trong `.gitignore`.
-* Lịch sử Git được quản lý theo chuẩn Conventional Commits (ví dụ: `feat(order):...`, `refactor(product):...`).
+* Lịch sử Git được quản lý theo chuẩn Conventional Commits (ví dụ: `feat(order):...`, `refactor(cart):...`).
 
 ## 10. File đã chỉnh sửa (Snapshot hiện tại)
 * **Gốc dự án:** `pom.xml`, `docker-compose.yml`, `.env`, `application.properties`, `.gitignore`.
 * **Package `identity`:** `User`, `UserRepository`, `UserService`, `UserController`.
 * **Package `product`:** `Product`, `ProductRepository`, `ProductService`, `ProductController`, `config/CloudinaryConfig`.
-* **Package `cart`:** `Cart`, `CartItem`, `CartRequest`, `CartRepository`, `CartService`, `CartController`.
+* **Package `cart`:** `Cart`, `CartItem`, `CartDto`, `CartItemDto`, `CartRequest`, `CartRepository`, `CartService`, `CartController`.
 * **Package `order`:** `Order`, `OrderItem`, `CheckoutRequest`, `OrderRepository`, `OrderService`, `OrderController`.
 * **Package config:** CorsConfig (Xử lý lỗi CORS cho Frontend).
