@@ -14,9 +14,11 @@ public class CartItem {
 
     @ManyToOne
     @JoinColumn(name = "cart_id")
-    @JsonIgnore // Ngắt vòng lặp JSON
+    @JsonIgnore
     private Cart cart;
 
-    private Long productId; // Chỉ lưu ID (Liên kết lỏng)
+    private Long productId;
     private Integer quantity;
+
+    // Đã xóa biến @Transient Product và toàn bộ đống Getter/Setter viết tay!
 }

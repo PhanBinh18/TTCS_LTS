@@ -1,8 +1,6 @@
 package com.example.demo.order;
 
-import com.example.demo.cart.Cart;
-import com.example.demo.cart.CartItem;
-import com.example.demo.cart.CartService;
+import com.example.demo.cart.*;
 import com.example.demo.product.Product;
 import com.example.demo.product.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +26,7 @@ public class OrderService {
     @Transactional
     public Order checkout(CheckoutRequest request) {
         // 1. Lấy giỏ hàng của user
-        Cart cart = cartService.getCartByUserId(request.getUserId());
+        CartDto cart = cartService.getCartByUserId(request.getUserId());
 
         if (cart.getItems() == null || cart.getItems().isEmpty()) {
             throw new RuntimeException("Giỏ hàng đang trống, không thể đặt hàng!");
@@ -47,7 +45,7 @@ public class OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
 
         // 3. Duyệt qua từng món trong Giỏ hàng
-        for (CartItem cartItem : cart.getItems()) {
+        for (CartItemDto cartItem : cart.getItems()) {
             // productService.reduceStock() sẽ tự động check kho, trừ kho và trả về thông tin SP mới nhất
             Product product = productService.reduceStock(cartItem.getProductId(), cartItem.getQuantity());
 

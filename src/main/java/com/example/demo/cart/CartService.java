@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -16,13 +18,44 @@ public class CartService {
     private CartRepository cartRepository;
 
     @Autowired
-    private ProductService productService; // Giao tiếp liên module
+    private ProductService productService;
 
     @Autowired
     private CartItemRepository cartItemRepository;
 
-    // Lấy giỏ hàng (Nếu user chưa có thì tự động tạo giỏ trống)
-    public Cart getCartByUserId(Long userId) {
+    // =================================================================
+    // HÀM BỔ TRỢ: Chuyển đổi từ Cart (Entity) sang CartDto (Gửi về React)
+    // =================================================================
+    private CartDto mapToDto(Cart cart) {
+        CartDto dto = new CartDto();
+        dto.setId(cart.getId());
+        dto.setUserId(cart.getUserId());
+        dto.setUpdatedAt(cart.getUpdatedAt());
+
+        List<CartItemDto> itemDtos = new ArrayList<>();
+        if (cart.getItems() != null) {
+            for (CartItem item : cart.getItems()) {
+                CartItemDto itemDto = new CartItemDto();
+                itemDto.setId(item.getId());
+                itemDto.setProductId(item.getProductId());
+                itemDto.setQuantity(item.getQuantity());
+
+                try {
+                    // Bơm dữ liệu thật vào DTO
+                    Product product = productService.getProductById(item.getProductId());
+                    itemDto.setProduct(product);
+                } catch (Exception e) {
+                    System.err.println("Không tìm thấy SP ID: " + item.getProductId());
+                }
+                itemDtos.add(itemDto);
+            }
+        }
+        dto.setItems(itemDtos);
+        return dto;
+    }
+
+    // Hàm nội bộ dùng để thao tác với DB
+    private Cart getCartEntity(Long userId) {
         return cartRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     Cart newCart = new Cart();
@@ -31,28 +64,29 @@ public class CartService {
                 });
     }
 
+    // Lấy giỏ hàng (Trả về DTO)
+    public CartDto getCartByUserId(Long userId) {
+        Cart cart = getCartEntity(userId);
+        return mapToDto(cart);
+    }
+
     @Transactional
-    public Cart addToCart(CartRequest request) {
-        // 1. Kiểm tra tồn kho từ module Product (Chỉ check, chưa trừ kho)
+    public CartDto addToCart(CartRequest request) {
         Product product = productService.getProductById(request.getProductId());
         if (product.getStock() < request.getQuantity()) {
-            throw new RuntimeException("Vượt quá số lượng tồn kho của: " + product.getName());
+            throw new RuntimeException("Vượt quá tồn kho!");
         }
 
-        // 2. Lấy giỏ hàng của User
-        Cart cart = getCartByUserId(request.getUserId());
+        Cart cart = getCartEntity(request.getUserId());
 
-        // 3. Kiểm tra xem sản phẩm này đã có trong giỏ chưa
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getProductId().equals(request.getProductId()))
                 .findFirst();
 
         if (existingItem.isPresent()) {
-            // Có rồi thì cộng dồn số lượng
             CartItem item = existingItem.get();
             item.setQuantity(item.getQuantity() + request.getQuantity());
         } else {
-            // Chưa có thì tạo item mới
             CartItem newItem = new CartItem();
             newItem.setCart(cart);
             newItem.setProductId(request.getProductId());
@@ -61,38 +95,31 @@ public class CartService {
         }
 
         cart.setUpdatedAt(LocalDateTime.now());
-        return cartRepository.save(cart);
+        Cart savedCart = cartRepository.save(cart);
+
+        return mapToDto(savedCart);
     }
 
-    // Làm trống giỏ hàng (Sẽ dùng khi Order thành công)
     @Transactional
     public void clearCart(Long userId) {
-        Cart cart = getCartByUserId(userId);
-        cart.getItems().clear(); // orphanRemoval sẽ tự lo việc xóa dưới DB
+        Cart cart = getCartEntity(userId);
+        cart.getItems().clear();
         cartRepository.save(cart);
     }
 
-    // Hàm cập nhật số lượng
     @Transactional
-    public Cart updateItemQuantity(Long itemId, int quantity) {
-        // Tìm chi tiết giỏ hàng theo ID
+    public CartDto updateItemQuantity(Long itemId, int quantity) {
         CartItem cartItem = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm này trong giỏ!"));
 
-        // Cập nhật số lượng mới
         cartItem.setQuantity(quantity);
         cartItemRepository.save(cartItem);
 
-        // Trả về lại toàn bộ Giỏ hàng (chứa số liệu mới nhất) để Frontend render lại
-        return cartItem.getCart();
+        return mapToDto(cartItem.getCart());
     }
 
-    // Hàm xóa 1 món đồ
     @Transactional
     public void removeItem(Long itemId) {
-        if (!cartItemRepository.existsById(itemId)) {
-            throw new RuntimeException("Không tìm thấy sản phẩm này trong giỏ!");
-        }
         cartItemRepository.deleteById(itemId);
     }
 }
