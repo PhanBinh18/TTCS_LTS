@@ -17,16 +17,16 @@ public class ProductController {
     private ProductService productService;
 
     // API Cho User: Phân trang, Tìm kiếm, Lọc
-    // Ví dụ URL: /api/products?page=0&size=10&sortBy=price&keyword=laptop
     @GetMapping
     public ResponseEntity<Page<Product>> getProducts(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "12") int size, // Cập nhật size thành 12 cho đẹp với grid UI
+            @RequestParam(required = false) String sortType, // Đổi tên biến để khớp với logic mới
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String brand) {  // Bổ sung tham số brand
 
-        return ResponseEntity.ok(productService.getProducts(page, size, sortBy, keyword, category));
+        return ResponseEntity.ok(productService.getProducts(page, size, sortType, keyword, category, brand));
     }
 
     @GetMapping("/{id}")

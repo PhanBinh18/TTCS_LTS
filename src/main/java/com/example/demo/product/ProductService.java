@@ -27,28 +27,38 @@ public class ProductService {
     // API DÀNH CHO USER (KHÁCH HÀNG)
     // ==========================================
 
-//    // Lấy danh sách phân trang, tìm kiếm và sắp xếp
-//    public Page<Product> getProducts(int page, int size, String sortBy, String keyword, String category) {
-//        // Tạo đối tượng phân trang & sắp xếp
-//        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
-//
-//        if (keyword != null && !keyword.isEmpty()) {
-//            return productRepository.findByNameContainingIgnoreCaseAndIsActiveTrue(keyword, pageable);
-//        }
-//        if (category != null && !category.isEmpty()) {
-//            return productRepository.findByCategoryAndIsActiveTrue(category, pageable);
-//        }
-//
-//        return productRepository.findAllByIsActiveTrue(pageable);
-//    }
-
     // Lấy danh sách phân trang, tìm kiếm và lọc kết hợp
-    public Page<Product> getProducts(int page, int size, String sortBy, String keyword, String category) {
-        // Tạo đối tượng phân trang & sắp xếp
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+    public Page<Product> getProducts(int page, int size, String sortType, String keyword, String category, String brand) {
+        // 1. Khởi tạo Sort mặc định (Sản phẩm mới nhất lên đầu)
+        Sort sort = Sort.by(Sort.Direction.DESC, "id");
 
-        // Gọi thẳng vào hàm JPQL
-        return productRepository.searchAndFilterProducts(keyword, category, pageable);
+        // 2. Dịch yêu cầu sắp xếp từ Frontend
+        if (sortType != null && !sortType.isEmpty()) {
+            switch (sortType) {
+                case "name_asc": // Từ A - Z
+                    sort = Sort.by(Sort.Direction.ASC, "name");
+                    break;
+                case "name_desc": // Từ Z - A
+                    sort = Sort.by(Sort.Direction.DESC, "name");
+                    break;
+                case "price_asc": // Giá thấp đến cao
+                    sort = Sort.by(Sort.Direction.ASC, "price");
+                    break;
+                case "price_desc": // Giá cao đến thấp
+                    sort = Sort.by(Sort.Direction.DESC, "price");
+                    break;
+                default:
+                    // Đề phòng trường hợp frontend gửi sai, vẫn lấy mặc định
+                    sort = Sort.by(Sort.Direction.DESC, "id");
+                    break;
+            }
+        }
+
+        // 3. Tạo đối tượng phân trang & sắp xếp
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // 4. Gọi thẳng vào hàm JPQL với tham số brand mới
+        return productRepository.searchAndFilterProducts(keyword, category, brand, pageable);
     }
 
     // Lấy chi tiết sản phẩm (Dùng cho Cart và Order gọi sang)
