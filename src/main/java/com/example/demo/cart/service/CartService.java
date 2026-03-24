@@ -1,5 +1,12 @@
-package com.example.demo.cart;
+package com.example.demo.cart.service;
 
+import com.example.demo.cart.dto.CartDto;
+import com.example.demo.cart.dto.CartItemDto;
+import com.example.demo.cart.dto.CartRequest;
+import com.example.demo.cart.entity.Cart;
+import com.example.demo.cart.entity.CartItem;
+import com.example.demo.cart.repository.CartItemRepository;
+import com.example.demo.cart.repository.CartRepository;
 import com.example.demo.product.Product;
 import com.example.demo.product.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,13 +78,13 @@ public class CartService {
     }
 
     @Transactional
-    public CartDto addToCart(CartRequest request) {
+    public CartDto addToCart(Long userId, CartRequest request) {
         Product product = productService.getProductById(request.getProductId());
         if (product.getStock() < request.getQuantity()) {
             throw new RuntimeException("Vượt quá tồn kho!");
         }
 
-        Cart cart = getCartEntity(request.getUserId());
+        Cart cart = getCartEntity(userId);
 
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getProductId().equals(request.getProductId()))

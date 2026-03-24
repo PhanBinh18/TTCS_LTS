@@ -1,5 +1,9 @@
-package com.example.demo.cart;
+package com.example.demo.cart.controller;
 
+import com.example.demo.cart.dto.CartDto;
+import com.example.demo.cart.dto.CartRequest;
+import com.example.demo.cart.service.CartService;
+import com.example.demo.identity.security.SecurityUtils; // <-- 1. Import bảo bối lấy ID
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,19 +15,25 @@ public class CartController {
     @Autowired
     private CartService cartService;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<CartDto> getCart(@PathVariable Long userId) {
-        return ResponseEntity.ok(cartService.getCartByUserId(userId));
+    // 2. XÓA {userId} trên URL, tự móc ID từ SecurityUtils
+    @GetMapping("/my-cart")
+    public ResponseEntity<CartDto> getCart() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(cartService.getCartByUserId(currentUserId));
     }
 
+    // 3. Truyền thêm ID vào hàm addToCart của Service
     @PostMapping("/add")
     public ResponseEntity<CartDto> addToCart(@RequestBody CartRequest request) {
-        return ResponseEntity.ok(cartService.addToCart(request));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(cartService.addToCart(currentUserId, request));
     }
 
-    @DeleteMapping("/{userId}/clear")
-    public ResponseEntity<String> clearCart(@PathVariable Long userId) {
-        cartService.clearCart(userId);
+    // 4. XÓA {userId} trên URL, tự móc ID từ SecurityUtils
+    @DeleteMapping("/clear")
+    public ResponseEntity<String> clearCart() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        cartService.clearCart(currentUserId);
         return ResponseEntity.ok("Đã làm trống giỏ hàng thành công!");
     }
 
