@@ -1,5 +1,7 @@
-package com.example.demo.identity;
+package com.example.demo.identity.controller;
 
+import com.example.demo.identity.service.UserService;
+import com.example.demo.identity.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
