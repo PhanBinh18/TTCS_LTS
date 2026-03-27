@@ -74,6 +74,45 @@ public class OrderService {
 
         return savedOrder;
     }
+
+    // =========================================================
+    // HÀM MỚI: Lấy danh sách đơn hàng của User đang đăng nhập
+    // =========================================================
+    public List<OrderDto> getMyOrders(Long userId) {
+        // 1. Lấy danh sách đơn hàng từ DB
+        List<Order> orders = orderRepository.findByUserIdOrderByIdDesc(userId);
+
+        // 2. Chuyển đổi từ Entity sang DTO
+        List<OrderDto> orderDtos = new ArrayList<>();
+
+        for (Order order : orders) {
+            OrderDto dto = new OrderDto();
+            dto.setId(order.getId());
+            dto.setReceiverName(order.getReceiverName());
+            dto.setPhoneNumber(order.getPhoneNumber());
+            dto.setShippingAddress(order.getShippingAddress());
+            dto.setPaymentMethod(order.getPaymentMethod());
+            dto.setStatus(order.getStatus());
+            dto.setTotalPrice(order.getTotalPrice());
+
+            // Map danh sách sản phẩm (Items)
+            List<OrderItemDto> itemDtos = new ArrayList<>();
+            for (OrderItem item : order.getItems()) {
+                OrderItemDto itemDto = new OrderItemDto();
+                itemDto.setProductId(item.getProductId());
+                itemDto.setProductName(item.getProductName());
+                itemDto.setPrice(item.getPrice());
+                itemDto.setQuantity(item.getQuantity());
+                itemDtos.add(itemDto);
+            }
+            dto.setItems(itemDtos);
+
+            orderDtos.add(dto);
+        }
+
+        return orderDtos;
+    }
+
     @Transactional
     public Order updateOrderStatus(Long orderId, String newStatus) {
         Order order = orderRepository.findById(orderId)

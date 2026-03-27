@@ -1,9 +1,11 @@
 package com.example.demo.order;
 
-import com.example.demo.identity.security.SecurityUtils; // <-- 1. Import bảo bối
+import com.example.demo.identity.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -20,6 +22,16 @@ public class OrderController {
         // 3. Truyền ID xuống Service
         return ResponseEntity.ok(orderService.checkout(currentUserId, request));
     }
+    // --- API MỚI DÀNH CHO USER ---
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<OrderDto>> getMyOrders() {
+        // 1. Tự động lấy ID người dùng từ Token (Bảo mật 100%, chống IDOR)
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        // 2. Lấy danh sách đơn hàng và trả về
+        List<OrderDto> myOrders = orderService.getMyOrders(currentUserId);
+        return ResponseEntity.ok(myOrders);
+    }
     // --- API MỚI DÀNH CHO ADMIN ---
     // Ví dụ: PUT /api/orders/1/status?newStatus=SHIPPING
     @PutMapping("/{id}/status")
@@ -34,4 +46,5 @@ public class OrderController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
 }
