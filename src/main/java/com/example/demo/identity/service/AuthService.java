@@ -43,7 +43,13 @@ public class AuthService {
 
         // Tạo JWT Token cho User vừa đăng ký
         String jwtToken = jwtService.generateToken(user);
-        return new AuthResponse(jwtToken);
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole()) // Lưu ý: Nếu Role của bạn là Enum thì dùng .name(), nếu là kiểu String thì chỉ cần .getRole()
+                .build();
     }
 
     /**
@@ -65,6 +71,12 @@ public class AuthService {
 
         // 3. In thẻ JWT và trả về
         String jwtToken = jwtService.generateToken(user);
-        return new AuthResponse(jwtToken);
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole()) // Tương tự như trên
+                .build();
     }
 }
