@@ -1,12 +1,14 @@
 services:
   db:
     image: mysql:8.4
-    container_name: ecommerce-ms
+    container_name: ecommerce-db-container
     restart: always
     environment:
       MYSQL_DATABASE: ecommerce_ms
-      MYSQL_USER: dev_user
       MYSQL_ROOT_PASSWORD: 123456
+      # Việc tạo user mới đôi khi gây rắc rối về quyền Schema trong Docker,
+      # tạm thời dùng root để test cho nhanh hoặc đảm bảo dev_user có đủ quyền.
+      MYSQL_USER: dev_user
       MYSQL_PASSWORD: 123456
     ports:
       - "3307:3306"
@@ -14,25 +16,30 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - db_data_v2:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
       interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 5
+      start_period: 20s
 
   app:
     build: .
-    container_name: ecommerce-app
+    container_name: ecommerce-app-container
     restart: always
     ports:
-      - "8081:8080"
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ecommerce_ms?allowMultiQueries=true&allowPublicKeyRetrieval=true&useSSL=false
+      # QUAN TRỌNG: URL phải trỏ đến service 'db' và cổng '3306'
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/ecommerce_ms?allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: dev_user
       SPRING_DATASOURCE_PASSWORD: 123456
+      # Thêm dòng này để Spring Boot đợi Hibernate khởi tạo xong
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
 volumes:
   db_data_v2:
