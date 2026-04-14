@@ -54,3 +54,32 @@ Trong Microservices, nếu sử dụng Session/Cookie truyền thống, Identity
 Với JWT, mọi thứ được giải quyết triệt để theo cơ chế **Phi tập trung (Decentralized Validation)**:
 - **Identity Service:** Là nơi duy nhất có kết nối với bảng `users` để kiểm tra mật khẩu và in ra JWT.
 - **Product/Order Service:** Hoàn toàn không cần kết nối bảng `users`. Chúng chỉ cần giữ bản sao của **Secret Key**. Khi nhận được request kẹp JWT, chúng tự lấy Secret Key ra kiểm tra chữ ký. Nếu chữ ký đúng, chúng tin tưởng tuyệt đối vào thông tin `role` và `userId` ghi trong Payload mà không cần gọi mạng sang hỏi Identity Service.
+
+---
+
+## 5. Ứng dụng SecurityContext để phòng chống lỗi IDOR
+
+**IDOR (Insecure Direct Object Reference)** là một lỗ hổng bảo mật nghiêm trọng xảy ra khi hệ thống cho phép người dùng truy cập hoặc thay đổi dữ liệu của người khác chỉ bằng cách thay đổi ID trong yêu cầu (Request).
+
+###  Cách làm sai (Dễ bị tấn công IDOR)
+Trong các hệ thống kém bảo mật, Server thường tin tưởng tuyệt đối vào ID do phía Client gửi lên.
+
+* **Request:** `POST /api/orders`
+* **Body:** json
+  {
+  "userId": 2,
+  "productId": 101,
+  "quantity": 1
+  } 
+
+Vấn đề: Một Hacker (đang đăng nhập với userId: 5) có thể dùng công cụ như Postman để sửa userId trong Body thành 2. Nếu Server không kiểm tra, nó sẽ tạo đơn hàng cho User 2 nhưng thực tế là do User 5 thực hiện.
+
+###  Cách làm của dự án (Bảo mật - Trustless Client)
+
+Dự án áp dụng nguyên tắc "Không tin tưởng Client". Mọi thông tin định danh quan trọng phải được trích xuất từ nguồn dữ liệu đã được Server xác thực (JWT Token).
+
+* Request: POST /api/orders
+* Body: (Chỉ chứa thông tin nghiệp vụ, không chứa ID người dùng)
+* json: {"productId": 101,
+  "quantity": 1}
+* Xử lý tại Server: Server lấy ID người dùng trực tiếp từ SecurityContextHolder - nơi lưu trữ thông tin của người dùng vừa mới vượt qua màng lọc xác thực Token thành công.
