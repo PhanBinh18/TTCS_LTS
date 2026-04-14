@@ -3,7 +3,7 @@ package com.ecommerce.backend.cart.controller;
 import com.ecommerce.backend.cart.dto.CartDto;
 import com.ecommerce.backend.cart.dto.CartRequest;
 import com.ecommerce.backend.cart.service.CartService;
-import com.ecommerce.backend.identity.security.SecurityUtils; // <-- 1. Import bảo bối lấy ID
+import com.ecommerce.backend.identity.security.SecurityUtils; //
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
